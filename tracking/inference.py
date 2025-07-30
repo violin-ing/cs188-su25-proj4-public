@@ -345,6 +345,7 @@ class DiscreteDistribution(dict):
         """
         "*** YOUR CODE HERE ***"
         totalVal = self.total()
+        
         if totalVal:
             for key in self:
                 self[key] /= totalVal
@@ -373,12 +374,17 @@ class DiscreteDistribution(dict):
         """
         "*** YOUR CODE HERE ***"
         totalVal = self.total()
+        
+        if totalVal == 0:
+            return None
+        
         randomVal = random.random() * totalVal
-        accumulatedProbability = 0
-        for key, weight in self:
-            if accumulatedProbability + weight > randomVal:
+        totalProb = 0
+
+        for key, weight in self.items():
+            totalProb += weight
+            if totalProb >= randomVal:
                 return key
-            accumulatedProbability += weight
         "*** END YOUR CODE HERE ***"
 
 
@@ -696,13 +702,17 @@ class ParticleFilter(InferenceModule):
 
         # Compute weights
         for particle in self.particles:
-            weights[particle] += self.getObservationProb(observation, pacmanPos, particle, jailPos)
+            weight = self.getObservationProb(observation, pacmanPos, particle, jailPos)
+            weights[particle] += weight
 
         # Handle case where all particles receive zero weight
         if weights.total() == 0:
             self.initializeUniformly(gameState)
         else:
-            self.particles = [weights.sample() for _ in range(self.numParticles)]
+            newParticles = []
+            for _ in range(self.numParticles):
+                newParticles.append(weights.sample())
+            self.particles = newParticles
         "*** END YOUR CODE HERE ***"
     
     ########### ########### ###########
@@ -719,8 +729,11 @@ class ParticleFilter(InferenceModule):
 
         for oldPos in self.particles:
             newPosDist = self.getPositionDistribution(gameState, oldPos)
-            newPos = newPosDist.sample()
-            newParticles.append(newPos)
+            if newPosDist.total() > 0:
+                newPos = newPosDist.sample()
+                newParticles.append(newPos)
+            else:
+                newParticles.append(oldPos)
 
         self.particles = newParticles
         "*** END YOUR CODE HERE ***"
